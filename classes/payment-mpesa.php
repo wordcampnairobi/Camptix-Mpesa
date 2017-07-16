@@ -4,8 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 include_once dirname(__FILE__).'/vendor/autoload.php';
 
-class Mpesa_Camptix extends CampTix_Payment_Method
-{
+class Mpesa_Camptix extends CampTix_Payment_Method {
 	public $id = 'mpesa';
 	public $name = 'Lipa Na Mpesa';
 	public $description = 'Pay for your Ticket Using Mpesa Mobile Money.';
