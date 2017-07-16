@@ -147,8 +147,8 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 
 			$client = new GuzzleHttp\Client();
 
-			$url = $this->options['paybill_no'] ? '':'';
-
+			$url =
+			
 			$credentials = base64_encode($url);
 
   		// Create a POST request
@@ -250,7 +250,7 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 			$mpesa_args_array[] = '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '" />';
 		}
 		//$url = $this->options['sandbox'] ? '' : '';
-		$url = $this->options['sandbox'] ? 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl' : 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl';
+		$url = $this->options['sandbox'] ? '' : '';
 
 		echo '<div id="tix">
 					<form action="' . $url . '" method="post" id="mpesa_payment_form">
