@@ -2,7 +2,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-include_once dirname(__FILE__).'/vendor/autoload.php';
+include_once dirname(__FILE__).'/vendor/autoload.php'; // to use the Guzzle HTTP client library
 
 class Mpesa_Camptix extends CampTix_Payment_Method {
 	public $id = 'mpesa';
