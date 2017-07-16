@@ -7,7 +7,7 @@
 * Author: Emmanuel Ammanulah
 * Author URI: https://nabaleka.com
 * Version: 1.0.0
-* Licence: GPLv2 or later
+* Licence: MIT
 */
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
