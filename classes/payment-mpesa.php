@@ -135,10 +135,11 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 		if ( $payload['status'] == 'OK' ) {
 
 			$client = new GuzzleHttp\Client();
-			'consumer_key' 	=> $this->options['consumer_key'],
-			'consumer_secret' => $this->options['consumer_secret'],
+			$consumer_key 	=> $this->options['consumer_key'],
+			$consumer_secret => $this->options['consumer_secret'],
+			$url = $consumer_key:$consumer_secret
 
-			$credentials = base64_encode('consumer_key'.":".'consumer_secret')
+			$credentials = base64_encode($url)
 
   		// Create a POST request
   		$response = $client->request(
