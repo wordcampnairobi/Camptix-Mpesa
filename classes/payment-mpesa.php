@@ -24,6 +24,7 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 			'consumer_key' => '',
 			'consumer_secret' => '',
 			'paybill_no' => '',
+			'sandbox' => true
 		), $this->get_payment_options() );
 
 		// IPN Listener
@@ -35,7 +36,9 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 		$this->add_settings_field_helper( 'consumer_key', __( 'Consumer Key', 'camptix' ), array( $this, 'field_text' ) );
 		$this->add_settings_field_helper( 'consumer_secret', __( 'Consumer Secret', 'camptix' ), array( $this, 'field_text' ) );
 		$this->add_settings_field_helper( 'paybill_no', __(' Paybill Number', 'camptix' ), array( $this, 'field_text' ) );
-
+		$this->add_settings_field_helper( 'sandbox', __( 'Sandbox Mode', 'camptix' ), array( $this, 'field_yesno' ),
+			__( "The Test Mode is a way to test payments.", 'camptix' )
+		);
 	}
 
 	function validate_options( $input ) {
@@ -47,6 +50,8 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 			$output['consumer_secret'] = $input['consumer_secret'];
 		if ( isset( $input['paybill_no'] ) )
 			$output['paybill_no'] = $input['paybill_no'];
+		if ( isset( $input['sandbox'] ) )
+			$output['sandbox'] = (bool) $input['sandbox'];
 
 		return $output;
 
@@ -112,7 +117,13 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 		$this->log( sprintf( 'Running payment_notify. Request data attached.' ), null, $_REQUEST );
 		$this->log( sprintf( 'Running payment_notify. Server data attached.' ), null, $_SERVER );
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
-		$payload = stripslashes_deep( $_POST );
+		$payload = stripslashes_deep( $_REQUEST );
+
+		$consumer_key = $this->options['consumer_key'];
+		$consumer_secret = $this->options['consumer_key'];
+		$hash = $_REQUEST['hash'];
+		$status = $_REQUEST['status'];
+		$checkhash = hash('sha512', "$consumer_secret|$_REQUEST[status]||||||||||$_REQUEST[udf1]|$_REQUEST[email]|$_REQUEST[firstname]|$_REQUEST[productinfo]|$_REQUEST[amount]|$_REQUEST[txnid]|$consumer_key");
 		$data_string = '';
 		$data_array = array();
 		// Dump the submitted variables and calculate security signature
@@ -135,11 +146,10 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 		if ( $payload['status'] == 'OK' ) {
 
 			$client = new GuzzleHttp\Client();
-			$consumer_key 	=> $this->options['consumer_key'],
-			$consumer_secret => $this->options['consumer_secret'],
-			$url = $consumer_key:$consumer_secret
 
-			$credentials = base64_encode($url)
+			$url = $this->options['paybill_no'] ? '':'';
+
+			$credentials = base64_encode($url);
 
   		// Create a POST request
   		$response = $client->request(
@@ -151,22 +161,20 @@ class Mpesa_Camptix extends CampTix_Payment_Method
   );
 
   // Parse the response object, e.g. read the headers, body, etc.
-  $headers = $response->getHeaders();
-  $body = $response->getBody();
+  //$headers = $response->getHeaders();
+  //$body = $response->getBody();
 
   // Output headers and body for debugging purposes
-  var_dump($headers, $body);
+//  var_dump($headers, $body);
 		}
-/*
+
 		$parameters = array(
-			'conusmer_key' 	=> $this->options['conusmer_key'],
-			'consumer_secret' => $this->options['consumer_secret'],
 			'paybill_no'    => $this->options['paybill_no'],
 			'trans_id'  => $payload['trans_id'],
 			'order_id'  => $order['attendee_id'],
 			'amount'		=> $order['total'] / 10
 		);
-		*/
+
 
 		$mpesa = new Mpesa_Payment();
 		$response = $mpesa->verify_request($parameters);
@@ -233,40 +241,19 @@ class Mpesa_Camptix extends CampTix_Payment_Method
 			'custom_str1' => $payment_token,
 			'source' => 'WordCamp-CampTix-Plugin'
 		);
-
+		if ( $this->options['sandbox'] ) {
+			$payload['consumer_key'] = 'boKqbIoOYWzMqM7NSc2xm162lpuFuaIt';
+			$payload['consumer_secret'] = 'H1BLgTXGsnZm9ZKV';
+		}
 		$mpesa_args_array = array();
 		foreach ( $payload as $key => $value ) {
 			$mpesa_args_array[] = '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '" />';
 		}
 		//$url = $this->options['sandbox'] ? '' : '';
-		$client = new GuzzleHttp\Client();
-		$url = 'consumer_key'.":".'consumer_secret';
-		$credentials = base64_encode($url);
-
-		// Create a POST request
-		try {
-		$response = $client->request(
-			'GET',
-			'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
-			[
-          'Authorization' => ['Basic '.$credentials ]
-      ]
-  );
-
-  // Parse the response object, e.g. read the headers, body, etc.
-  $headers = $response->getHeaders();
-  $body = $response->getBody();
-
-  // Output headers and body for debugging purposes
-  var_dump($headers, $body);
-}catch (Exception $e) {
-		echo $e->getMessage();
-}
-
-
+		$url = $this->options['sandbox'] ? 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl' : 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl';
 
 		echo '<div id="tix">
-					<form action="' . $client . '" method="post" id="mpesa_payment_form">
+					<form action="' . $url . '" method="post" id="mpesa_payment_form">
 						' . implode( '', $mpesa_args_array ) . '
 						<script type="text/javascript">
 							document.getElementById("mpesa_payment_form").submit();
