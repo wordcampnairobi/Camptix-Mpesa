@@ -2,9 +2,11 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
-include_once dirname(__FILE__).'/vendor/autoload.php'; // to use the Guzzle HTTP client library
+// add this to use the Guzzle HTTP client library
+include_once dirname(__FILE__).'/vendor/autoload.php';
 
-class Mpesa_Camptix extends CampTix_Payment_Method {
+class Mpesa_Camptix extends CampTix_Payment_Method
+{
 	public $id = 'mpesa';
 	public $name = 'Lipa Na Mpesa';
 	public $description = 'Pay for your Ticket Using Mpesa Mobile Money.';
@@ -130,6 +132,31 @@ class Mpesa_Camptix extends CampTix_Payment_Method {
 
 		$order = $this->get_order( $payment_token );
 
+		if ( $payload['status'] == 'OK' ) {
+
+			$client = new GuzzleHttp\Client();
+			'consumer_key' 	=> $this->options['consumer_key'],
+			'consumer_secret' => $this->options['consumer_secret'],
+
+			$credentials = base64_encode('consumer_key'.":".'consumer_secret')
+
+  		// Create a POST request
+  		$response = $client->request(
+      'GET',
+      'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
+      [
+          'Authorization' => ['Basic '.$credentials ]
+      ]
+  );
+
+  // Parse the response object, e.g. read the headers, body, etc.
+  $headers = $response->getHeaders();
+  $body = $response->getBody();
+
+  // Output headers and body for debugging purposes
+  var_dump($headers, $body);
+		}
+/*
 		$parameters = array(
 			'conusmer_key' 	=> $this->options['conusmer_key'],
 			'consumer_secret' => $this->options['consumer_secret'],
@@ -138,12 +165,13 @@ class Mpesa_Camptix extends CampTix_Payment_Method {
 			'order_id'  => $order['attendee_id'],
 			'amount'		=> $order['total'] / 10
 		);
+		*/
 
 		$mpesa = new Mpesa_Payment();
-		$result = $mpesa->verify_request($parameters);
+		$response = $mpesa->verify_request($parameters);
 
 		// Verify IPN came from Mpesa
-		if ( $result == 0 ) {
+		if ( $response == 0 ) {
 			switch ( $payload['payment_status'] ) {
 				case "COMPLETE" :
 					$this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED );
