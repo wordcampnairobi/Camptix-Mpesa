@@ -25,8 +25,11 @@ function camptix_add_kes_currency( $currencies ) {
 // Load the Mpesa Payment Method
 add_action( 'camptix_load_addons', 'camptix_mpesa_load_payment_method' );
 function camptix_mpesa_load_payment_method() {
-  if ( ! class_exists( 'Mpesa_Camptix' ) )
-    require_once plugin_dir_path( __FILE__ ) . 'classes/payment-mpesa.php';
+  if ( ! class_exists( 'Mpesa_Camptix' ) ){
+      
+  }
+    require_once $plugi_dir.'/classes/payment-mpesa.php';
+  
   camptix_register_addon( 'Mpesa_Camptix' );
 }
 

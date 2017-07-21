@@ -3,283 +3,247 @@
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 // add this to use the Guzzle HTTP client library
-include_once dirname(__FILE__).'/vendor/autoload.php';
+$plugi_dir = plugin_dir_path(__FILE__);
+include_once '/../vendor/autoload.php';
+use GuzzleHttp\Client;
 
 class Mpesa_Camptix extends CampTix_Payment_Method
 {
 	public $id = 'mpesa';
 	public $name = 'Lipa Na Mpesa';
 	public $description = 'Pay for your Ticket Using Mpesa Mobile Money.';
-	public $supported_currencies = array( 'KES');
+	public $supported_currencies = array( 'KES','USD');
 
-	/**
-	* This array is to store our options.
-	* Use $this->get_payment_options() to retrieve them.
-	*/
-
+	/* Payment method options will be stored here.*/
 	protected $options = array();
 
-	function camptix_init() {
+	/*When the class is first initialized*/
+        function camptix_init() {
 		$this->options = array_merge( array(
 			'consumer_key' => '',
 			'consumer_secret' => '',
 			'paybill_no' => '',
 			'sandbox' => true
 		), $this->get_payment_options() );
-
-		// IPN Listener
-		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
+                
+                
+                //add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 	}
+        
+        public function payment_checkout($payment_token){
+            
+            if (!$payment_token || empty($payment_token)){
+                //Return false if there is no payment token
+                return false;
+            }
+                       
+            if (!in_array(
+                    $this->camptix_options['currency'],
+                    $this->supported_currencies)){
+                        die(__('The selected curency is not supported','camptix'));
+            }
+            
+            /* Add a return url*/
+            $return_url = add_query_arg(array(
+                'tix_action' => 'payment_return',
+                'tix_payment_method'=>'camptix_mpesa',
+                'tix_payment_token'=>$payment_token,
+            ), $this->get_tickets_url());
+            
+            /* Add a cancel url*/
+            $cancel_url = add_query_arg(array(
+                'tix_action' => 'payment_cancel',
+                'tix_payment_method'=>'camptix_mpesa',
+                'tix_payment_token'=>$payment_token,
+            ), $this->get_tickets_url());
+            
+            /* Add a notify url*/
+            $notify_url = add_query_arg(array(
+                'tix_action' => 'payment_notify',
+                'tix_payment_method'=>'camptix_mpesa',
+                'tix_payment_token'=>$payment_token,
+            ), $this->get_tickets_url());
+            
+            $info_url = add_query_arg(array(
+                'tix_action' => 'payment_notify',
+                'tix_payment_method'=>'camptix_mpesa',
+                'tix_payment_token'=>$payment_token,
+            ), $this->get_tickets_url());
+            
+            //save the order in a variable
+            
+            $order = $this->get_order($payment_token);
+            
+            /* Create a payload */
+            $payload = array(
+                //Merchant details
+                'consumer_key' => $this->options['consumer_key'],
+                'consumer_secret'=> $this->options['consumer_secret'],
+                'paybill_no' => $this->options['paybill_no'],
+                'info_url'=>$info_url,
+                'return_url'=>$return_url,
+                'cancel_url'=>$cancel_url,
+                
+                //Items details
+                'm_payment_id'=>$payment_token,
+                'amount' => $order['total'],
+                'item_name' => get_bloginfo('name'). ' purchase, Order '.$payment_token,
+                
+                
+                //Any other custom string
+                'source'=> 'WordCamp-CampTix-Plugin',
+                
+                //
+            );
+            
+            
+            /* Check if the sandbox option is enabled and load the sandbox 
+             * credentials
+             */
+            
+            if($this->options['sandbox']){
+                $payload['consumer_key'] = 'B5pGWsCLYZmoYz9iRQeWnijdRQlw29Ph';
+                $payload['consumer_secret'] = 'B5pGWsCLYZmoYz9iRQeWnijdRQlw29Ph';
+            }
+            
+            //Tell user what to do
+            
+            $this->show_payment_info();
+            
+            //$this->generateAothKey();
+           // var_dump($payload);
 
-	function payment_settings_fields() {
-
-		$this->add_settings_field_helper( 'consumer_key', __( 'Consumer Key', 'camptix' ), array( $this, 'field_text' ) );
-		$this->add_settings_field_helper( 'consumer_secret', __( 'Consumer Secret', 'camptix' ), array( $this, 'field_text' ) );
-		$this->add_settings_field_helper( 'paybill_no', __(' Paybill Number', 'camptix' ), array( $this, 'field_text' ) );
-		$this->add_settings_field_helper( 'sandbox', __( 'Sandbox Mode', 'camptix' ), array( $this, 'field_yesno' ),
-			__( "The Test Mode is a way to test payments.", 'camptix' )
-		);
-	}
-
-	function validate_options( $input ) {
+            //Communicate with safaricom here
+            
+            
+            return;
+        }
+            
+            
+        //Configures the payment method screen
+        function payment_settings_fields(){
+            $this->add_settings_field_helper( 'consumer_key', __( 'consumer key', 'API Consumer Key' ), array( $this, 'field_text' ) );
+            $this->add_settings_field_helper( 'consumer_secret', __( 'consumer secret', 'API Consumer Secret' ), array( $this, 'field_text' ) );
+            $this->add_settings_field_helper( 'paybill_no','Business Pay Bill Number', array( $this, 'field_text' ) );
+            $this->add_settings_field_helper( 'sandbox', __( 'Sandbox', 'Developer Sandbox' ), array( $this, 'field_yesno' ) );
+        }
+        
+        // Called by CampTix When your payment methods are being called
+        function validate_options( $input ) {
 		$output = $this->options;
 
 		if ( isset( $input['consumer_key'] ) )
 			$output['consumer_key'] = $input['consumer_key'];
+
 		if ( isset( $input['consumer_secret'] ) )
 			$output['consumer_secret'] = $input['consumer_secret'];
-		if ( isset( $input['paybill_no'] ) )
-			$output['paybill_no'] = $input['paybill_no'];
+
 		if ( isset( $input['sandbox'] ) )
 			$output['sandbox'] = (bool) $input['sandbox'];
 
 		return $output;
-
- 	}
-
-	function template_redirect() {
-		if ( ! isset( $_REQUEST['tix_payment_method'] ) || 'camptix_mpesa' != $_REQUEST['tix_payment_method'] )
-			return;
-		if ( isset( $_GET['tix_action'] ) ) {
-			if ( 'payment_cancel' == $_GET['tix_action'] )
-				$this->payment_cancel();
-			if ( 'payment_return' == $_GET['tix_action'] )
-				$this->payment_return();
-			if ( 'payment_notify' == $_GET['tix_action'] )
-				$this->payment_notify();
-		}
 	}
-	function payment_return() {
-		global $camptix;
-		$this->log( sprintf( 'Running payment_return. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_return. Server data attached.' ), null, $_SERVER );
-		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
-		if ( empty( $payment_token ) )
-			return;
-		$attendees = get_posts(
-			array(
-				'posts_per_page' => 1,
-				'post_type' => 'tix_attendee',
-				'post_status' => array( 'draft', 'pending', 'publish', 'cancel', 'refund', 'failed' ),
-				'meta_query' => array(
-					array(
-						'key' => 'tix_payment_token',
-						'compare' => '=',
-						'value' => $payment_token,
-						'type' => 'CHAR',
-					),
-				),
-			)
-		);
-		if ( empty( $attendees ) )
-			return;
-		$attendee = reset( $attendees );
-		if ( 'draft' == $attendee->post_status ) {
-			return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING );
-		} else {
-			$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
-			$url = add_query_arg( array(
-				'tix_action' => 'access_tickets',
-				'tix_access_token' => $access_token,
-			), $camptix->get_tickets_url() );
-			wp_safe_redirect( esc_url_raw( $url . '#tix' ) );
-			die();
-		}
-	}
-
-	/**
-	 * Runs when Mpesa sends an ITN signal.
-	 * Verify the payload and use $this->payment_result
-	 * to signal a transaction result back to CampTix.
-	 */
-	function payment_notify() {
-		global $camptix;
-		$this->log( sprintf( 'Running payment_notify. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_notify. Server data attached.' ), null, $_SERVER );
-		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
-		$payload = stripslashes_deep( $_REQUEST );
-
-		$consumer_key = $this->options['consumer_key'];
-		$consumer_secret = $this->options['consumer_key'];
-		$hash = $_REQUEST['hash'];
-		$status = $_REQUEST['status'];
-		$checkhash = hash('sha512', "$consumer_secret|$_REQUEST[status]||||||||||$_REQUEST[udf1]|$_REQUEST[email]|$_REQUEST[firstname]|$_REQUEST[productinfo]|$_REQUEST[amount]|$_REQUEST[txnid]|$consumer_key");
-		$data_string = '';
-		$data_array = array();
-		// Dump the submitted variables and calculate security signature
-		foreach ( $payload as $key => $val ) {
-			if ( $key != 'signature' ) {
-				$data_string .= $key .'='. urlencode( $val ) .'&';
-				$data_array[$key] = $val;
-			}
-		}
-		$data_string = substr( $data_string, 0, -1 );
-		$signature = md5( $data_string );
-		$pfError = false;
-		if ( 0 != strcmp( $signature, $payload['signature'] ) ) {
-			$pfError = true;
-			$this->log( sprintf( 'ITN request failed, signature mismatch: %s', $payload ) );
-		}
-
-		$order = $this->get_order( $payment_token );
-
-		if ( $payload['status'] == 'OK' ) {
-
-			$client = new GuzzleHttp\Client();
-
-			$url =
-			
-			$credentials = base64_encode($url);
-
-  		// Create a POST request
-  		$response = $client->request(
-      'GET',
-      'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
-      [
-          'Authorization' => ['Basic '.$credentials ]
-      ]
-  );
-
-  // Parse the response object, e.g. read the headers, body, etc.
-  //$headers = $response->getHeaders();
-  //$body = $response->getBody();
-
-  // Output headers and body for debugging purposes
-//  var_dump($headers, $body);
-		}
-
-		$parameters = array(
-			'paybill_no'    => $this->options['paybill_no'],
-			'trans_id'  => $payload['trans_id'],
-			'order_id'  => $order['attendee_id'],
-			'amount'		=> $order['total'] / 10
-		);
+        
+        
+  
+        
 
 
-		$mpesa = new Mpesa_Payment();
-		$response = $mpesa->verify_request($parameters);
+        /* Mpesa validation and verification should begin here*/
+        
+        //Steps:
+        
+        /**
+         * Get what the user has bought
+         * Proceed to checkout
+         * 
+         */
+        
+        /**
+         * During checkout:
+         * ===============
+         * connect to mpesa using the mpesa api
+         * request for an authentication access token
+         * recieve the authentication token
+         * 
+         * check for payment confirmation
+         * user entering his number
+         * 
+        */
+       function show_payment_info(){
+           //Guide the user on how to complete payment
+           //Format the message
+           
+           $message = "You have chosen Lipa na Mpesa.<br>"
+                   ." 1. On your phone, go to Mpesa menu<br>"
+                   . "2. Go to <em>Lipa na mpesa.</em><br> "
+                   . "3. Go to <em>Buy Goods and Services</em><br>"
+                   . "4. Enter the <em>Till Number:</em>". $this->options['paybill_no']
+                   . "<br>5. Enter the amount:"
+                   . "<br>6. Enter <em>PIN</em> to complete transactions"
+                   . "<br>7. Wait for confirmation message<br>";
+           
+           
+           
+           echo '<div id="tix" class="tix-info"';
+           echo $message;
+           echo '</div>';
+           
+           
+       }
+       
+       public function generateAothKey(){
+           //Generate the access token for the session
 
-		// Verify IPN came from Mpesa
-		if ( $response == 0 ) {
-			switch ( $payload['payment_status'] ) {
-				case "COMPLETE" :
-					$this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED );
-					break;
-				case "FAILED" :
-					$this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED );
-					break;
-				case "PENDING" :
-					$this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING );
-					break;
-			}
-		} else {
-			$this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING );
-		}
+            
 
-		$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
-			$url = add_query_arg( array(
-				'tix_action' => 'access_tickets',
-				'tix_access_token' => $access_token,
-			), $camptix->get_tickets_url() );
-			wp_safe_redirect( esc_url_raw( $url . '#tix' ) );
-			die();
-	}
-	public function payment_checkout( $payment_token ) {
-		if ( ! $payment_token || empty( $payment_token ) )
-			return false;
-		if ( ! in_array( $this->camptix_options['currency'], $this->supported_currencies ) )
-			die( __( 'The selected currency is not supported by this payment method.', 'camptix' ) );
-		$return_url = add_query_arg( array(
-			'tix_action' => 'payment_return',
-			'tix_payment_token' => $payment_token,
-			'tix_payment_method' => 'camptix_mpesa',
-		), $this->get_tickets_url() );
-		$cancel_url = add_query_arg( array(
-			'tix_action' => 'payment_cancel',
-			'tix_payment_token' => $payment_token,
-			'tix_payment_method' => 'camptix_mpesa',
-		), $this->get_tickets_url() );
-		$notify_url = add_query_arg( array(
-			'tix_action' => 'payment_notify',
-			'tix_payment_token' => $payment_token,
-			'tix_payment_method' => 'camptix_mpesa',
-		), $this->get_tickets_url() );
-		$order = $this->get_order( $payment_token );
-		$payload = array(
-			// Merchant details
-			'consumer_key' => $this->options['consumer_key'],
-			'consumer_secret' => $this->options['consumer_secret'],
-			'return_url' => $return_url,
-			'cancel_url' => $cancel_url,
-			'notify_url' => $notify_url,
-			// Item details
-			'm_payment_id' => $payment_token,
-			'amount' => $order['total'],
-			'item_name' => get_bloginfo( 'name' ) .' purchase, Order ' . $payment_token,
-			'item_description' => sprintf( __( 'New order from %s', 'woothemes' ), get_bloginfo( 'name' ) ),
-			// Custom strings
-			'custom_str1' => $payment_token,
-			'source' => 'WordCamp-CampTix-Plugin'
-		);
-		if ( $this->options['sandbox'] ) {
-			$payload['consumer_key'] = 'boKqbIoOYWzMqM7NSc2xm162lpuFuaIt';
-			$payload['consumer_secret'] = 'H1BLgTXGsnZm9ZKV';
-		}
-		$mpesa_args_array = array();
-		foreach ( $payload as $key => $value ) {
-			$mpesa_args_array[] = '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '" />';
-		}
-		//$url = $this->options['sandbox'] ? '' : '';
-		$url = $this->options['sandbox'] ? '' : '';
+            define('CONSUMER_KEY', 'B5pGWsCLYZmoYz9iRQeWnijdRQlw29Ph');
+            define('SECRET_KEY', 'InAVKm8MNJpqHQ5C');
+            //define('SECRET_KEY', 'InAVKm8MN');
 
-		echo '<div id="tix">
-					<form action="' . $url . '" method="post" id="mpesa_payment_form">
-						' . implode( '', $mpesa_args_array ) . '
-						<script type="text/javascript">
-							document.getElementById("mpesa_payment_form").submit();
-						</script>
-					</form>
-				</div>';
-		return;
-	}
-	/**
-	 * Runs when the user cancels their payment during checkout at Lipa na Mpesa.
-	 * This will simply tell CampTix to put the created attendee drafts into to Cancelled state.
-	 **/
-	function payment_cancel() {
-		global $camptix;
-		$this->log( sprintf( 'Running payment_cancel. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_cancel. Server data attached.' ), null, $_SERVER );
-		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
-		if ( ! $payment_token )
-			die( 'empty token' );
-		// Set the associated attendees to cancelled.
-		return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
-	}
+            $data = CONSUMER_KEY.":".SECRET_KEY;
 
+            $credentials = base64_encode($data);
+
+            $API_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials";
+
+            $client = new Client();
+
+            $response = $client->request('GET', $API_url, [
+                'headers' => [
+                    'User-Agent' => 'testing/1.0',
+                    'Accept'     => 'application/json',
+                    'Authorization'      => ['Basic '.$credentials]
+                ]
+            ]);
+            //$client->request('GET', 'https://sandbox.safaricom.co.ke/oauth/v1/generate', [
+            //    'query' => ['foo' => 'bar']
+            //]);
+
+            //var_dump($response);
+            $code = $response->getStatusCode(); // 200
+            $reason = $response->getReasonPhrase(); // OK
+
+              // Parse the response object, e.g. read the headers, body, etc.
+              $headers = $response->getHeaders();
+              $body = $response->getBody();
+              // Output headers and body for debugging purposes
+
+
+              foreach ($response->getHeaders() as $name => $values) {
+                echo $name . ': ' . implode(', ', $values) . "\r\n";
+            }
+           
+       }
+       
+       public function sendAPIRequest(){
+           
+       }
+       
+       function processAPIRequest(){
+           //Process the response and return appropriate action
+           
+    
+       }
+        
 }
-
-
-
-
- ?>
