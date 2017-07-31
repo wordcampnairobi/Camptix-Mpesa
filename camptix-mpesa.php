@@ -7,6 +7,7 @@
  * Author URI: https://nabaleka.com
  * Version: 1.0.0
  * Licence: GPLv3
+ * Licence URI: https://www.gnu.org/licenses/gpl-3.0.html
  */
 
 if ( !defined( 'ABSPATH' ) )
