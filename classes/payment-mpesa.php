@@ -162,11 +162,13 @@ class Mpesa_Camptix extends CampTix_Payment_Method
                  * user entering his number
                  *
                  */
-                function show_payment_info( )
+                function show_payment_info( $details )
                         {
+                                $total = $details[ 'total' ];
                                 //Guide the user on how to complete payment
                                 //Format the message
-                                $message = "You have chosen Lipa na Mpesa.<br>" . " 1. On your phone, go to Mpesa menu<br>" . "2. Go to <em>Lipa na mpesa.</em><br> " . "3. Go to <em>Buy Goods and Services</em><br>" . "4. Enter the <em>Till Number:</em> " . $this->options[ 'paybill_no' ] . "<br>5. Enter the amount:" . "<br>6. Enter <em>PIN</em> to complete transactions" . "<br>7. Wait for confirmation message<br>" . "<br>After you receive the confirmation message, please input your phone number below using you have made payment .</br>" . "<br><form action ='' method='POST'><input type='number' placeholder='Enter your mobile number' name='msisdn'><br>
+                                $_POST['amount'] = $total;
+                                $message = "You have chosen Lipa na Mpesa.<br>" . " 1. On your phone, go to Mpesa menu<br>" . "2. Go to <em>Lipa na mpesa.</em><br> " . "3. Go to <em>Buy Goods and Services</em><br>" . "4. Enter the <em>Till Number:</em> " . $this->options[ 'paybill_no' ] . "<br>5. Enter the amount: Ksh $total"<br>6. Enter <em>PIN</em> to complete transactions" . "<br>7. Wait for confirmation message<br>" . "<br>After you receive the confirmation message, please input your phone number below using you have made payment .</br>" . "<br><form action ='' method='POST'><input type='number' placeholder='Enter your mobile number' name='msisdn'><br>
         <input type='hidden'  name='newPost' value='" . base64_encode( serialize( $_POST ) ) . "'><br>" . "<br><button type='submit'>Verify Payment</button></form><br>";
                                 
                                 //."<form action=''>"
