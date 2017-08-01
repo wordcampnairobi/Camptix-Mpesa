@@ -1,4 +1,4 @@
-# CampTix Payment Method: Mpesa using Kopokopo
+# CampTix Payment Method: Mpesa using <a href="https://app.kopokopo.com/push_api">Kopokopo</a>
 
 <p>Simple WordPress plugin which adds Mpesa support to CampTix</p>
 
