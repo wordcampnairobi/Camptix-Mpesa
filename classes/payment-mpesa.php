@@ -4,137 +4,137 @@ if ( !defined( 'ABSPATH' ) )
                 exit; // Exit if accessed directly
 
 class Mpesa_Camptix extends CampTix_Payment_Method
-        {
-                public $id = 'mpesa';
-                public $name = 'Lipa Na Mpesa';
-                public $description = 'Pay for your Ticket Using Mpesa Mobile Money.';
-                public $supported_currencies = array( 'KES', 'USD' );
-                
-                /* Payment method options will be stored here.*/
-                protected $options = array( );
-                
-                /*When the class is first initialized*/
-                function camptix_init( )
-                        {
-                                //    global $wp;
-                                $url           = site_url() . '/transaction/';
-                                $this->options = array_merge( array(
-                                                 'paybill_no' => '',
-                                                'trans_url' => $url 
-                                ), $this->get_payment_options() );
-                                
-                                
-                                //add_action( 'template_redirect', array( $this, 'template_redirect' ) );
-                        }
-                
-                public function payment_checkout( $payment_token )
-                        {
-                                
-                                if ( !$payment_token || empty( $payment_token ) )
-                                        {
-                                                //Return false if there is no payment token
-                                                return false;
-                                        } //!$payment_token || empty( $payment_token )
-                                
-                                if ( !in_array( $this->camptix_options[ 'currency' ], $this->supported_currencies ) )
-                                        {
-                                                die( __( 'The selected curency is not supported', 'camptix' ) );
-                                        } //!in_array( $this->camptix_options[ 'currency' ], $this->supported_currencies )
-                                
-                                /* Add a return url*/
-                                $return_url = add_query_arg( array(
-                                                 'tix_action' => 'payment_return',
-                                                'tix_payment_method' => 'camptix_mpesa',
-                                                'tix_payment_token' => $payment_token 
-                                ), $this->get_tickets_url() );
-                                
-                                /* Add a cancel url*/
-                                $cancel_url = add_query_arg( array(
-                                                 'tix_action' => 'payment_cancel',
-                                                'tix_payment_method' => 'camptix_mpesa',
-                                                'tix_payment_token' => $payment_token 
-                                ), $this->get_tickets_url() );
-                                
-                                /* Add a notify url*/
-                                $notify_url = add_query_arg( array(
-                                                 'tix_action' => 'payment_notify',
-                                                'tix_payment_method' => 'camptix_mpesa',
-                                                'tix_payment_token' => $payment_token 
-                                ), $this->get_tickets_url() );
-                                
-                                $info_url = add_query_arg( array(
-                                                 'tix_action' => 'payment_notify',
-                                                'tix_payment_method' => 'camptix_mpesa',
-                                                'tix_payment_token' => $payment_token 
-                                ), $this->get_tickets_url() );
-                                
-                                //save the order in a variable
-                                
-                                $order   = $this->get_order( $payment_token );
-                                /* Create a payload */
-                                $payload = array(
-                                                //Merchant details
-                                                 'paybill_no' => $this->options[ 'paybill_no' ],
-                                                'info_url' => $info_url,
-                                                'return_url' => $return_url,
-                                                'cancel_url' => $cancel_url,
-                                                
-                                                //Items details
-                                                'm_payment_id' => $payment_token,
-                                                'amount' => $order[ 'total' ],
-                                                'item_name' => get_bloginfo( 'name' ) . ' purchase, Order ' . $payment_token,
-                                                
-                                                
-                                                //Any other custom string
-                                                'source' => 'WordCamp-CampTix-Plugin' 
-                                                
-                                                //
-                                );
-                                
-                                
-                                /* Check if the sandbox option is enabled and load the sandbox
-                                 * credentials
-                                 */
-                                
-                                
-                                //Tell user what to do
-                                
-                                $return = $this->show_payment_info();
-                                
-                                //$this->generateAothKey();
-                                // var_dump($payload);
-                                
-                                //Communicate with safaricom here
-                                
-                                
-                                return $return;
-                        }
-                
-                
-                //Configures the payment method screen
-                function payment_settings_fields( )
-                        {
-                                $this->add_settings_field_helper( 'paybill_no', 'Business Pay Bill Number', array(
-                                                 $this,
-                                                'field_text' 
-                                ) );
-                                $this->add_settings_field_helper( 'trans_url', 'Tranasaction callback url', array(
-                                                 $this,
-                                                'field_text' 
-                                ) );
-                        }
-                
-                // Called by CampTix When your payment methods are being called
-                function validate_options( $input )
-                        {
-                                $output = $this->options;
-                                
-                                
-                                if ( isset( $input[ 'paybill_no' ] ) )
-                                                $output[ 'paybill_no' ] = $input[ 'paybill_no' ];
-                                
-                                return $output;
-                        }
+    {
+        public $id = 'mpesa';
+        public $name = 'Lipa Na Mpesa';
+        public $description = 'Pay for your Ticket Using Mpesa Mobile Money.';
+        public $supported_currencies = array( 'KES', 'USD' );
+        
+        /* Payment method options will be stored here.*/
+        protected $options = array( );
+            
+        /*When the class is first initialized*/
+        function camptix_init( )
+                {
+                        //    global $wp;
+                        $url           = site_url() . '/transaction/';
+                        $this->options = array_merge( array(
+                                         'paybill_no' => '',
+                                        'trans_url' => $url 
+                        ), $this->get_payment_options() );
+                        
+                        
+                        //add_action( 'template_redirect', array( $this, 'template_redirect' ) );
+                }
+        
+        public function payment_checkout( $payment_token )
+                {
+                        
+                        if ( !$payment_token || empty( $payment_token ) )
+                                {
+                                        //Return false if there is no payment token
+                                        return false;
+                                } //!$payment_token || empty( $payment_token )
+                        
+                        if ( !in_array( $this->camptix_options[ 'currency' ], $this->supported_currencies ) )
+                                {
+                                        die( __( 'The selected curency is not supported', 'camptix' ) );
+                                } //!in_array( $this->camptix_options[ 'currency' ], $this->supported_currencies )
+                        
+                        /* Add a return url*/
+                        $return_url = add_query_arg( array(
+                                         'tix_action' => 'payment_return',
+                                        'tix_payment_method' => 'camptix_mpesa',
+                                        'tix_payment_token' => $payment_token 
+                        ), $this->get_tickets_url() );
+                        
+                        /* Add a cancel url*/
+                        $cancel_url = add_query_arg( array(
+                                         'tix_action' => 'payment_cancel',
+                                        'tix_payment_method' => 'camptix_mpesa',
+                                        'tix_payment_token' => $payment_token 
+                        ), $this->get_tickets_url() );
+                        
+                        /* Add a notify url*/
+                        $notify_url = add_query_arg( array(
+                                         'tix_action' => 'payment_notify',
+                                        'tix_payment_method' => 'camptix_mpesa',
+                                        'tix_payment_token' => $payment_token 
+                        ), $this->get_tickets_url() );
+                        
+                        $info_url = add_query_arg( array(
+                                         'tix_action' => 'payment_notify',
+                                        'tix_payment_method' => 'camptix_mpesa',
+                                        'tix_payment_token' => $payment_token 
+                        ), $this->get_tickets_url() );
+                        
+                        //save the order in a variable
+                        
+                        $order   = $this->get_order( $payment_token );
+                        /* Create a payload */
+                        $payload = array(
+                                        //Merchant details
+                                         'paybill_no' => $this->options[ 'paybill_no' ],
+                                        'info_url' => $info_url,
+                                        'return_url' => $return_url,
+                                        'cancel_url' => $cancel_url,
+                                        
+                                        //Items details
+                                        'm_payment_id' => $payment_token,
+                                        'amount' => $order[ 'total' ],
+                                        'item_name' => get_bloginfo( 'name' ) . ' purchase, Order ' . $payment_token,
+                                        
+                                        
+                                        //Any other custom string
+                                        'source' => 'WordCamp-CampTix-Plugin' 
+                                        
+                                        //
+                        );
+                        
+                        
+                        /* Check if the sandbox option is enabled and load the sandbox
+                         * credentials
+                         */
+                        
+                        
+                        //Tell user what to do
+                        
+                        $return = $this->show_payment_info();
+                        
+                        //$this->generateAothKey();
+                        // var_dump($payload);
+                        
+                        //Communicate with safaricom here
+                        
+                        
+                        return $return;
+                }
+        
+        
+        //Configures the payment method screen
+        function payment_settings_fields( )
+                {
+                        $this->add_settings_field_helper( 'paybill_no', 'Business Pay Bill Number', array(
+                                         $this,
+                                        'field_text' 
+                        ) );
+                        $this->add_settings_field_helper( 'trans_url', 'Tranasaction callback url', array(
+                                         $this,
+                                        'field_text' 
+                        ) );
+                }
+        
+        // Called by CampTix When your payment methods are being called
+        function validate_options( $input )
+                {
+                        $output = $this->options;
+                        
+                        
+                        if ( isset( $input[ 'paybill_no' ] ) )
+                                        $output[ 'paybill_no' ] = $input[ 'paybill_no' ];
+                        
+                        return $output;
+                }
                 
                 
                 
